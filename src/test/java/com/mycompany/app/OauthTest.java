@@ -37,6 +37,7 @@ public class OauthTest {
 	public static final String NETFLIX_ACCESS_TOKEN_URL = "http://openapi.lovefilm.com/oauth/access_token";
 	public static final String NETFLIX_AUTHORIZE_URL = "http://openapi.lovefilm.com/oauth/oauth/login";
 
+
 	@Test
 	public void testGetRequest_normalCondition_expect403() throws IOException {
 		URL url = new URL("http://openapi.lovefilm.com/oauth/request_token");
@@ -45,13 +46,45 @@ public class OauthTest {
 	}
 
 	@Test
-	public void testSendRequest_title_noError() throws IOException {
-		URL url = new URL("http://openapi.lovefilm.com/catalog/title");
+	public void testConnection_whenRequestIsSigned_return200() throws IOException, OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException {
+		//URL url = new URL("http://openapi.lovefilm.com/catalog/title");
+		URL url = new URL("http://openapi.lovefilm.com/oauth/request_token");
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-		Assert.assertEquals(403, conn.getResponseCode());
+		OAuthConsumer consumer = new DefaultOAuthConsumer(CONSUMER_KEY, CONSUMER_SECRET);
+		consumer.sign(conn);
+		conn.connect();
+		Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
 	}
 
+	private String readResponse(HttpURLConnection conn) throws IOException{
+		BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		String decodedString = null;
+		StringBuilder response = new StringBuilder();
+	
+		while ((decodedString = in.readLine()) != null) {
+			response.append(decodedString);
+		}
+		in.close();
+		return response.toString();
+	}
+	
+	@Test
+	public void testPostRequest_whenRequestIsSigned_returnTokenAndSecret() throws IOException, OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException {
+		//URL url = new URL("http://openapi.lovefilm.com/catalog/title");
+		URL url = new URL("http://openapi.lovefilm.com/oauth/request_token");
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		OAuthConsumer consumer = new DefaultOAuthConsumer(CONSUMER_KEY, CONSUMER_SECRET);
+		consumer.sign(conn);
+		conn.connect();
+		
+		String response = readResponse(conn);
+		Assert.assertTrue(response.indexOf("oauth_token")!= -1);
+		Assert.assertTrue(response.indexOf("oauth_token_secret")!= -1);
+		Assert.assertTrue(response.indexOf("login_url")!= -1);
+		System.out.println(response);
+
+	}	
+	
 	@Ignore
 	@Test
 	public void testPostRequest() throws IOException {
@@ -72,86 +105,4 @@ public class OauthTest {
 		in.close();
 	}
 
-	@Test
-	public void testGetRequestToken() throws IOException, OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException {
-		OAuthConsumer consumer = new DefaultOAuthConsumer(CONSUMER_KEY, CONSUMER_SECRET);
-
-		OAuthProvider provider = new DefaultOAuthProvider(NETFLIX_REQUEST_TOKEN_URL, NETFLIX_ACCESS_TOKEN_URL, NETFLIX_AUTHORIZE_URL);
-		provider.setRequestHeader("oauth_consumer_key", CONSUMER_KEY);
-		
-		System.out.println(provider.toString());
-
-		// we do not support callbacks, thus pass OOB
-		String authUrl = provider.retrieveRequestToken(consumer, OAuth.OUT_OF_BAND);
-		authUrl = OAuth.addQueryParameters(authUrl, OAuth.OAUTH_CONSUMER_KEY, CONSUMER_KEY, "application_name",
-				APPLICATION_NAME);
-
-		System.out.println("Request token: " + consumer.getToken());
-		System.out.println("Token secret: " + consumer.getTokenSecret());
-
-		System.out.println("Now visit:\n" + authUrl + "\n... and grant this app authorization");
-		System.out.println("Enter the PIN code and hit ENTER when you're done:");
-
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		String pin = br.readLine();
-
-		System.out.println("Fetching access token from Twitter...");
-
-		provider.retrieveAccessToken(consumer, pin);
-
-		System.out.println("Access token: " + consumer.getToken());
-		System.out.println("Token secret: " + consumer.getTokenSecret());
-
-		URL url = new URL("http://api.netflix.com/catalog/titles");
-		HttpURLConnection request = (HttpURLConnection) url.openConnection();
-
-		consumer.sign(request);
-
-		System.out.println("Sending request...");
-		request.connect();
-
-		System.out.println("Response: " + request.getResponseCode() + " " + request.getResponseMessage());
-	}
-
-	@Ignore
-	@Test
-	public void testGetRequestTokenGoogle() throws OAuthMessageSignerException, OAuthNotAuthorizedException,
-			OAuthExpectationFailedException, OAuthCommunicationException, IOException {
-		OAuthConsumer consumer = new DefaultOAuthConsumer("matthiaskaeppler.de", "etpfOSfQ4e9xnfgOJETy4D56");
-
-		String scope = "http://www.blogger.com/feeds";
-		OAuthProvider provider = new DefaultOAuthProvider("https://www.google.com/accounts/OAuthGetRequestToken?scope="
-				+ URLEncoder.encode(scope, "utf-8"), "https://www.google.com/accounts/OAuthGetAccessToken",
-				"https://www.google.com/accounts/OAuthAuthorizeToken?hd=default");
-
-		System.out.println("Fetching request token...");
-
-		String authUrl = provider.retrieveRequestToken(consumer, OAuth.OUT_OF_BAND);
-
-		System.out.println("Request token: " + consumer.getToken());
-		System.out.println("Token secret: " + consumer.getTokenSecret());
-
-		System.out.println("Now visit:\n" + authUrl + "\n... and grant this app authorization");
-		System.out.println("Enter the verification code and hit ENTER when you're done:");
-
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		String verificationCode = br.readLine();
-
-		System.out.println("Fetching access token...");
-
-		provider.retrieveAccessToken(consumer, verificationCode.trim());
-
-		System.out.println("Access token: " + consumer.getToken());
-		System.out.println("Token secret: " + consumer.getTokenSecret());
-
-		URL url = new URL("http://www.blogger.com/feeds/default/blogs");
-		HttpURLConnection request = (HttpURLConnection) url.openConnection();
-
-		consumer.sign(request);
-
-		System.out.println("Sending request...");
-		request.connect();
-
-		System.out.println("Response: " + request.getResponseCode() + " " + request.getResponseMessage());
-	}
 }
