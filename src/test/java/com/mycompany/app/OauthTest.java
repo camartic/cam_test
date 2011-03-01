@@ -64,12 +64,12 @@ public class OauthTest {
 		while ((decodedString = in.readLine()) != null) {
 			response.append(decodedString);
 		}
-		in.close();
+		//in.close();
 		return response.toString();
 	}
 	
 	@Test
-	public void testPostRequest_whenRequestIsSigned_returnTokenAndSecret() throws IOException, OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException {
+	public void testStep1PostRequest_whenRequestIsSigned_returnTokenAndSecret() throws IOException, OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException {
 		//URL url = new URL("http://openapi.lovefilm.com/catalog/title");
 		URL url = new URL("http://openapi.lovefilm.com/oauth/request_token");
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -82,8 +82,23 @@ public class OauthTest {
 		Assert.assertTrue(response.indexOf("oauth_token_secret")!= -1);
 		Assert.assertTrue(response.indexOf("login_url")!= -1);
 		System.out.println(response);
-
-	}	
+		int startIndex = response.indexOf("oauth_token");
+		startIndex = response.indexOf("=", startIndex)+1;
+		int endIndex = response.indexOf("&", startIndex);
+		String value = response.substring(startIndex, endIndex);
+		System.out.println("To allow us to access your Lovefilm account on your behalf, please visit https://www.lovefilm.com/activate, and enter the activation code: "+value);
+		System.out.println(readResponse(conn));
+	}
+	
+	@Test
+	public void testParseToken(){
+		String response = "oauth_token=ZGMNM&oauth_token_secret=TyaVX3KVyVJEqpvZYA6bRhtv&login_url=https%3A%2F%2Fwww.lovefilm.com%2Factivate:";
+		int startIndex = response.indexOf("oauth_token");
+		startIndex = response.indexOf("=", startIndex)+1;
+		int endIndex = response.indexOf("&", startIndex);
+		String value = response.substring(startIndex, endIndex);
+		Assert.assertEquals("ZGMNM", value);
+	}
 	
 	@Ignore
 	@Test
