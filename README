@@ -1,0 +1,4 @@
+1st Mar 2011
+An initial attempt to play with the love film api.
+
+Basic oauth is working with the Signpost library. This is done via unit tests in a standalone app. Next step is to set up the code using a web server, so user can be redirected back after they have entered their Lovefilm credentials on the site
